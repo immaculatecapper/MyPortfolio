@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#1a1530"/>
+  <rect x="70" y="45" width="500" height="270" rx="14" fill="#0d0b18" stroke="#3b3363" stroke-width="2"/>
+  <rect x="70" y="45" width="500" height="34" rx="14" fill="#262044"/>
+  <circle cx="96" cy="62" r="6" fill="#ef4444"/><circle cx="116" cy="62" r="6" fill="#eab308"/><circle cx="136" cy="62" r="6" fill="#22c55e"/>
+  <g font-family="Menlo, monospace" font-size="15">
+    <text x="94" y="112" fill="#a78bfa">$ <tspan fill="#e5e7eb">ls -alht --color</tspan></text>
+    <text x="94" y="140" fill="#a78bfa">$ <tspan fill="#e5e7eb">marco</tspan></text>
+    <text x="94" y="168" fill="#a78bfa">$ <tspan fill="#e5e7eb">cd /tmp/missing &amp;&amp; polo</tspan></text>
+    <text x="94" y="196" fill="#a78bfa">$ <tspan fill="#e5e7eb">bash l2q3a.sh</tspan></text>
+    <text x="94" y="224" fill="#f87171">Something went wrong</text>
+    <text x="94" y="252" fill="#4ade80">Number 42 was found after 87 tries</text>
+    <text x="94" y="284" fill="#a78bfa">$ <tspan fill="#e5e7eb">▌</tspan></text>
+  </g>
+</svg>
