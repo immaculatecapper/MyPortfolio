@@ -4,7 +4,9 @@ import errorHandler from '../helpers/dbErrorHandler.js'
 
 // POST /api/users - add a new user (sign up)
 const create = async (req, res) => {
-  const user = new User(req.body)
+  // Never let a sign-up choose its own role - everyone who signs up is a "user"
+  const { role, ...fields } = req.body
+  const user = new User({ ...fields, role: 'user' })
   try {
     await user.save()
     return res.status(200).json({ message: 'Successfully signed up!' })
@@ -16,7 +18,7 @@ const create = async (req, res) => {
 // GET /api/users - get all users (password fields never returned)
 const list = async (req, res) => {
   try {
-    const users = await User.find().select('name email updated created')
+    const users = await User.find().select('name email role updated created')
     res.json(users)
   } catch (err) {
     return res.status(400).json({ error: errorHandler.getErrorMessage(err) })
@@ -46,7 +48,10 @@ const read = (req, res) => {
 const update = async (req, res) => {
   try {
     let user = req.profile
-    user = extend(user, req.body)
+    const changes = { ...req.body }
+    // Only an admin may change someone's role
+    if (!req.auth || req.auth.role !== 'admin') delete changes.role
+    user = extend(user, changes)
     user.updated = Date.now()
     await user.save()
     user.hashed_password = undefined
@@ -70,11 +75,11 @@ const remove = async (req, res) => {
   }
 }
 
-// DELETE /api/users - remove all users
+// DELETE /api/users - remove all regular users (admin accounts are kept)
 const removeAll = async (req, res) => {
   try {
-    const result = await User.deleteMany({})
-    res.json({ message: 'All users deleted!', deletedCount: result.deletedCount })
+    const result = await User.deleteMany({ role: { $ne: 'admin' } })
+    res.json({ message: 'All non-admin users deleted!', deletedCount: result.deletedCount })
   } catch (err) {
     return res.status(400).json({ error: errorHandler.getErrorMessage(err) })
   }

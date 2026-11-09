@@ -1,7 +1,7 @@
 {
   "name": "myportfolio",
   "version": "1.0.0",
-  "description": "COMP229 Assignment 2 - Portfolio REST API (Node.js, Express, MongoDB/Mongoose) with JWT auth",
+  "description": "COMP229 Assignment 3 - Full stack portfolio (React + Node.js/Express + MongoDB) with JWT auth and user roles",
   "type": "module",
   "main": "server.js",
   "author": "Mark Perez",
@@ -10,7 +10,8 @@
     "start": "node server.js",
     "server": "nodemon server.js",
     "client": "npm --prefix client run vite",
-    "dev": "npm --prefix client run dev"
+    "dev": "npm --prefix client run dev",
+    "seed": "node server/seed/seed.js"
   },
   "dependencies": {
     "compression": "^1.7.4",

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { profile } from '../data/profile.js';
+import { contactApi } from '../api/api.js';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 // Starting (empty) values for every field in the contact form
 const emptyFormValues = {
@@ -13,12 +15,20 @@ const emptyFormValues = {
 
 /**
  * Contact page: contact-information panel + a controlled contact form.
- * On submit the contact is saved to MongoDB via POST /api/contacts and the
- * user is redirected to the Home page,
- * which shows a thank-you message using the captured data.
+ * On submit the whole message is saved to MongoDB via POST /api/contacts.
+ * If it saves, the visitor is redirected to the Home page, which shows a
+ * thank-you message; if it fails, the error is shown and the form is kept.
  */
 export default function Contact() {
-  const [formValues, setFormValues] = useState(emptyFormValues);
+  const { user } = useAuth();
+  // Signed-in users get their name and email filled in for them
+  const [formValues, setFormValues] = useState(() => {
+    if (!user) return emptyFormValues;
+    const [firstName = '', ...rest] = user.name.split(' ');
+    return { ...emptyFormValues, firstName, lastName: rest.join(' '), email: user.email };
+  });
+  const [error, setError] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const navigate = useNavigate();
 
   // Update the matching field in state whenever an input changes
@@ -29,24 +39,23 @@ export default function Contact() {
 
   const handleSubmit = async (event) => {
     event.preventDefault(); // stop the browser's full-page form submission
-    console.log('Contact form submitted:', formValues);
-    // Save the contact to MongoDB through the backend REST API (POST /api/contacts)
+    setError('');
+    setIsSending(true);
     try {
-      const response = await fetch('/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstname: formValues.firstName,
-          lastname: formValues.lastName,
-          email: formValues.email,
-        }),
+      // Save the message to MongoDB through the backend REST API
+      await contactApi.create({
+        firstname: formValues.firstName,
+        lastname: formValues.lastName,
+        email: formValues.email,
+        contactNumber: formValues.contactNumber,
+        message: formValues.message,
       });
-      console.log('API response:', await response.json());
-    } catch (error) {
-      console.error('Could not reach the backend:', error);
+      // Pass the captured data to the Home page through router state
+      navigate('/', { state: { submittedMessage: formValues } });
+    } catch (err) {
+      setError(err.message);
+      setIsSending(false);
     }
-    // Pass the captured data to the Home page through router state
-    navigate('/', { state: { submittedMessage: formValues } });
   };
 
   return (
@@ -75,6 +84,7 @@ export default function Contact() {
         </aside>
 
         <form className="card contact-form" onSubmit={handleSubmit}>
+          {error && <div className="alert-error" role="alert">{error}</div>}
           <div className="form-row">
             <label>
               First Name
@@ -99,7 +109,9 @@ export default function Contact() {
             Message
             <textarea name="message" rows="6" value={formValues.message} onChange={handleFieldChange} required />
           </label>
-          <button type="submit" className="btn btn-primary">Send Message</button>
+          <button type="submit" className="btn btn-primary" disabled={isSending}>
+            {isSending ? 'Sending…' : 'Send Message'}
+          </button>
         </form>
       </div>
     </>

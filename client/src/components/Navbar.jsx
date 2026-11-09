@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import Logo from './Logo.jsx';
+import { useAuth } from '../auth/AuthContext.jsx';
 
 // Navigation entries rendered in the header (path + visible label)
 const navigationLinks = [
@@ -19,6 +20,14 @@ const navigationLinks = [
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
+  const { user, isAuthenticated, isAdmin, signout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignout = async () => {
+    closeMenu();
+    await signout();
+    navigate('/');
+  };
 
   return (
     <header className="site-header">
@@ -50,6 +59,32 @@ export default function Navbar() {
               </NavLink>
             </li>
           ))}
+
+          {/* Links that depend on who is signed in */}
+          {isAuthenticated && (
+            <li>
+              <NavLink to="/messages" onClick={closeMenu}>Messages</NavLink>
+            </li>
+          )}
+          {isAdmin && (
+            <li>
+              <NavLink to="/users" onClick={closeMenu}>Users</NavLink>
+            </li>
+          )}
+          {isAuthenticated ? (
+            <li className="nav-auth">
+              <span className="nav-user">
+                {user.name}
+                <span className={`role-badge ${isAdmin ? 'admin' : ''}`}>{user.role}</span>
+              </span>
+              <button type="button" className="btn btn-outline btn-sm" onClick={handleSignout}>Sign Out</button>
+            </li>
+          ) : (
+            <li className="nav-auth">
+              <NavLink to="/signin" onClick={closeMenu}>Sign In</NavLink>
+              <Link to="/signup" className="btn btn-primary btn-sm" onClick={closeMenu}>Sign Up</Link>
+            </li>
+          )}
         </ul>
       </nav>
     </header>

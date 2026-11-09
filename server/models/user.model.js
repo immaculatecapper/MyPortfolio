@@ -10,6 +10,9 @@ const UserSchema = new mongoose.Schema({
     match: [/.+\@.+\..+/, 'Please fill a valid email address'],
     required: 'Email is required',
   },
+  // User role: "admin" can create/update/delete everything, "user" can only read.
+  // New sign-ups are always "user"; the admin account is created by the seed script.
+  role: { type: String, enum: ['user', 'admin'], default: 'user' },
   created: { type: Date, default: Date.now },
   updated: { type: Date, default: Date.now },
   // The plain-text password is never stored - only its salted hash

@@ -1,6 +1,7 @@
 import Contact from '../models/contact.model.js'
 import extend from 'lodash/extend.js'
 import errorHandler from '../helpers/dbErrorHandler.js'
+import User from '../models/user.model.js'
 
 // POST /api/contacts - add a new contact
 const create = async (req, res) => {
@@ -13,10 +14,18 @@ const create = async (req, res) => {
   }
 }
 
-// GET /api/contacts - get all contacts
+// GET /api/contacts - admins get every contact message,
+// regular users only see the messages they sent (matched by their email)
 const list = async (req, res) => {
   try {
-    const contacts = await Contact.find().select('firstname lastname email')
+    const filter = {}
+    if (req.auth.role !== 'admin') {
+      const user = await User.findById(req.auth._id).select('email')
+      filter.email = user ? user.email : '__none__'
+    }
+    const contacts = await Contact.find(filter)
+      .select('firstname lastname email contactNumber message created')
+      .sort({ created: -1 })
     res.json(contacts)
   } catch (err) {
     return res.status(400).json({ error: errorHandler.getErrorMessage(err) })

@@ -1,6 +1,15 @@
-# MyPortfolio – COMP229 Assignment 2
+# MyPortfolio – COMP229 Assignment 3 (Full Stack)
 
-Mark Perez's portfolio: React + Vite frontend (Assignment 1, in `client/`) with a Node.js / Express REST API backed by MongoDB (Mongoose) and JWT authentication.
+Mark Perez's full-stack portfolio: React + Vite frontend (`client/`) connected to a Node.js / Express REST API backed by MongoDB (Mongoose), with JWT authentication and **Admin / User roles**.
+
+## What's new in Assignment 3
+
+- **Roles** – every user has `role: "user" | "admin"`. Sign-ups are always `user`; the admin account is hardcoded in MongoDB by `npm run seed`.
+- **Admin** can Create / Read / Update / Delete Projects, Qualifications (Education) and Contacts from the frontend, and manage users on the *Users* page.
+- **User** can sign up, sign in and view everything read-only; *Messages* shows only the messages they sent.
+- **Frontend forms (controlled React state)**: Sign Up, Sign In, Project, Qualification, Contact (create + edit).
+- **State management**: `AuthContext` (global sign-in state + JWT in sessionStorage) and a `useRecords` hook that keeps each list in sync with the API.
+- **Protected routes**: backend `requireSignin` + `isAdmin` middleware; frontend `<PrivateRoute>` / `<PrivateRoute adminOnly>`.
 
 ## Project structure
 
@@ -13,8 +22,14 @@ MyPortfolio/
 │   ├── models/               # contact, project, qualification, user (Mongoose schemas)
 │   ├── controllers/          # CRUD controllers + auth.controller.js (signin/signout/JWT)
 │   ├── routes/               # REST routes for each resource + auth.routes.js
+│   ├── seed/seed.js          # creates the hardcoded admin + starter projects/qualifications
 │   └── helpers/dbErrorHandler.js
-├── client/                   # React frontend from Assignment 1
+├── client/src/
+│   ├── api/                  # apiClient.js (fetch + JWT) and api.js (CRUD calls per resource)
+│   ├── auth/AuthContext.jsx  # global auth state: user, token, isAdmin, signin, signout
+│   ├── hooks/useRecords.js   # list + create/update/remove state for one resource
+│   ├── components/           # Navbar, PrivateRoute, RecordForm, AdminActions, ...
+│   └── pages/                # Home, Projects, Education, Contact, Signin, Signup, Messages, Users, ...
 └── Portfolio_API.postman_collection.json
 ```
 
@@ -28,13 +43,26 @@ npm install
 #    (make sure the database name in the URI is "Portfolio")
 copy .env.example .env        # Windows   (cp .env.example .env on Mac/Linux)
 
-# 3. frontend dependencies
+# 3. create the hardcoded admin account (+ starter portfolio entries) in MongoDB
+npm run seed
+
+# 4. frontend dependencies
 cd client
 npm install
 
-# 4. run frontend (5173) and backend (3000) together
+# 5. run frontend (5173) and backend (3000) together
 npm run dev
 ```
+
+### Admin account
+
+`npm run seed` creates/resets the admin user. Default credentials (change them in `.env` with `ADMIN_EMAIL` / `ADMIN_PASSWORD` before seeding):
+
+| Email | Password | Role |
+|---|---|---|
+| admin@portfolio.com | Admin@123 | admin |
+
+Anyone else can create a `user` account on the Sign Up page.
 
 - Backend only: `node server.js` (root) → http://localhost:3000 shows `{"message":"Welcome to My Portfolio application."}`
 - Frontend only: `npm run vite` (in `client/`) → http://localhost:5173
@@ -52,13 +80,22 @@ npm run dev
 
 ### Protected routes (need header `Authorization: Bearer <token>`)
 
-- **Users:** `GET /api/users/:id`, `DELETE /api/users`; `PUT` / `DELETE /api/users/:id` also require that the token belongs to that same user (otherwise 403).
-- **Contacts:** everything except `POST` (the public contact form can submit, only a signed-in user can read/manage messages).
-- **Projects / Qualifications:** `POST`, `PUT`, `DELETE` (reading is public).
+| Route | Who |
+|---|---|
+| `GET` projects / qualifications | public |
+| `POST`, `PUT`, `DELETE` projects / qualifications | **admin** |
+| `POST /api/contacts` | public (contact form) |
+| `GET /api/contacts` | signed in – admin sees all, a user sees only their own |
+| `GET/PUT/DELETE /api/contacts/:id`, `DELETE /api/contacts` | **admin** |
+| `POST /api/users` | public (sign up – role is always `user`) |
+| `GET /api/users`, `DELETE /api/users` | **admin** (delete-all keeps admin accounts) |
+| `GET/PUT/DELETE /api/users/:id` | that same user, or an admin (only an admin can change `role`) |
+
+Without a token → `401`; signed in without the right role → `403`.
 
 Passwords are stored as a salted HMAC hash (`hashed_password` + `salt`) and never returned by the API.
 
 ## Testing with Postman
 
-Import `Portfolio_API.postman_collection.json`. Run **1 - Auth → Sign up**, then **Sign in** – the token and IDs are saved to collection variables automatically, so every other request works in order.
-Note: "DELETE all users" removes your login, so run Sign up + Sign in again afterwards if you need more requests.
+Import `Portfolio_API.postman_collection.json`. Run `npm run seed` first, then run the collection in order: **Sign up → Sign in** (saves the user `token`) → **Sign in as ADMIN** (saves `adminToken`) → **POST project as USER** (expects 403). Admin-only requests use `{{adminToken}}` automatically.
+Note: the collection's "DELETE all" requests empty those collections – run `npm run seed` again afterwards to restore the starter entries.

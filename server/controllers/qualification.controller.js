@@ -16,7 +16,7 @@ const create = async (req, res) => {
 // GET /api/qualifications - get all qualifications
 const list = async (req, res) => {
   try {
-    const qualifications = await Qualification.find().select('title firstname lastname email completion description')
+    const qualifications = await Qualification.find().select('title firstname lastname email completion description').sort({ completion: -1 })
     res.json(qualifications)
   } catch (err) {
     return res.status(400).json({ error: errorHandler.getErrorMessage(err) })

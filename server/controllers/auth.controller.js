@@ -11,11 +11,12 @@ const signin = async (req, res) => {
     if (!user.authenticate(req.body.password)) {
       return res.status(401).send({ error: "Email and password don't match." })
     }
-    const token = jwt.sign({ _id: user._id }, config.jwtSecret)
-    res.cookie('t', token, { expire: new Date() + 9999 })
+    // The role is put inside the token so protected routes can check it
+    const token = jwt.sign({ _id: user._id, role: user.role }, config.jwtSecret, { expiresIn: '1d' })
+    res.cookie('t', token, { expires: new Date(Date.now() + 24 * 60 * 60 * 1000), httpOnly: true })
     return res.json({
       token,
-      user: { _id: user._id, name: user.name, email: user.email },
+      user: { _id: user._id, name: user.name, email: user.email, role: user.role },
     })
   } catch (err) {
     return res.status(401).json({ error: 'Could not sign in' })
@@ -29,21 +30,35 @@ const signout = (req, res) => {
 }
 
 // Middleware: request must carry a valid "Authorization: Bearer <token>" header.
-// The decoded token is put on req.auth
+// The decoded token ({ _id, role }) is put on req.auth
 const requireSignin = expressjwt({
   secret: config.jwtSecret,
   algorithms: ['HS256'],
-  userProperty: 'auth',
   requestProperty: 'auth',
 })
 
-// Middleware: signed-in user may only change their OWN account
+// Middleware: signed-in user must have the "admin" role.
+// The role is re-checked in the database so a changed role takes effect immediately.
+const isAdmin = async (req, res, next) => {
+  try {
+    const user = req.auth && (await User.findById(req.auth._id).select('role'))
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' })
+    }
+    next()
+  } catch (err) {
+    return res.status(403).json({ error: 'Admin access required' })
+  }
+}
+
+// Middleware: signed-in user may only change their OWN account (admins may change any)
 const hasAuthorization = (req, res, next) => {
-  const authorized = req.profile && req.auth && req.profile._id == req.auth._id
-  if (!authorized) {
+  const isOwner = req.profile && req.auth && req.profile._id == req.auth._id
+  const isAdminUser = req.auth && req.auth.role === 'admin'
+  if (!isOwner && !isAdminUser) {
     return res.status(403).json({ error: 'User is not authorized' })
   }
   next()
 }
 
-export default { signin, signout, requireSignin, hasAuthorization }
+export default { signin, signout, requireSignin, isAdmin, hasAuthorization }
